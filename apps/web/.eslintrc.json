@@ -1,0 +1,23 @@
+{
+  "root": true,
+  "extends": ["@itddd/eslint-config/next.js"],
+
+  "ignorePatterns": ["!.storybook"],
+
+  "parserOptions": {
+    "project": "tsconfig.lint.json"
+  },
+
+  "overrides": [
+    {
+      "files": [
+        "src/app/**/@(page|layout|template|loading|error|not-found|global-error).tsx",
+        "src/app/**/@(page|layout|template|loading|error|not-found|global-error)/index.tsx"
+      ],
+      "rules": {
+        "import/prefer-default-export": "error",
+        "import/no-default-export": "off"
+      }
+    }
+  ]
+}

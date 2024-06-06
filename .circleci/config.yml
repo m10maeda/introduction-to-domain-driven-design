@@ -1,0 +1,102 @@
+version: 2.1
+
+executors:
+  base:
+    docker:
+      - image: cimg/node:20.11.0-browsers
+        environment:
+          TURBO_UI: 'false'
+
+commands:
+  prepare-dependencies:
+    steps:
+      - restore_cache:
+          name: Restore pnpm Package Cache
+          keys:
+            - pnpm-packages-{{ checksum "pnpm-lock.yaml" }}
+
+      - run:
+          name: Install pnpm package manager
+          command: |
+            sudo corepack enable
+            sudo corepack prepare pnpm@latest-9 --activate
+
+      - run:
+          name: Install Dependencies
+          command: |
+            pnpm install
+
+      - save_cache:
+          name: Save pnpm Package Cache
+          key: pnpm-packages-{{ checksum "pnpm-lock.yaml" }}
+          paths:
+            - node_modules
+
+jobs:
+  lint:
+    executor: base
+
+    steps:
+      - checkout
+
+      - prepare-dependencies
+
+      - run:
+          name: Format Check
+          command: |
+            pnpm run format:check
+
+      - run:
+          name: Run ESLint
+          command: |
+            pnpm run lint --continue
+
+  test:
+    executor: base
+
+    steps:
+      - checkout
+
+      - prepare-dependencies
+
+      - run:
+          name: Run Unit Test
+          command: |
+            pnpm run test --continue -- --ci --runInBand --coverage --reporters=default --reporters=jest-junit
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+
+      - store_test_results:
+          path: ./reports/
+
+      - store_artifacts:
+          path: ./coverage
+
+  integration-test:
+    executor: base
+
+    steps:
+      - checkout
+
+      - prepare-dependencies
+
+      - run:
+          name: Run Integration Test
+          command: |
+            pnpm run test:integration --continue -- --ci --runInBand
+
+      - store_test_results:
+          path: ./reports
+
+workflows:
+  main:
+    jobs:
+      - lint
+
+      - test:
+          requires:
+            - lint
+
+      - integration-test:
+          requires:
+            - test
